@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Employee Management System</title>
+    <script src="https://unpkg.com/jspdf@latest/dist/jspdf.umd.min.js"></script>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
+    <style>
+        .loader {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #3498db;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body class="bg-gray-100">
+    <div id="loginSection" class="min-h-screen flex items-center justify-center">
+        <div class="bg-white p-8 rounded-lg shadow-md w-96">
+            <h2 class="text-2xl font-bold mb-6 text-center">Employee Management System</h2>
+            <form id="loginForm" class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Email</label>
+                    <input type="email" id="email" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500" required>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Password</label>
+                    <input type="password" id="password" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500" required>
+                </div>
+                <button type="submit" class="w-full bg-blue-500 text-white p-2 rounded-md hover:bg-blue-600">Login</button>
+            </form>
+        </div>
+    </div>
+
+    <div id="dashboard" class="hidden">
+        <nav class="bg-white shadow-lg">
+            <div class="max-w-7xl mx-auto px-4">
+                <div class="flex justify-between h-16">
+                    <div class="flex">
+                        <div class="flex-shrink-0 flex items-center">
+                            <h1 class="text-xl font-bold">EMS Dashboard</h1>
+                        </div>
+                    </div>
+                    <div class="flex items-center">
+                        <span id="userInfo" class="mr-4"></span>
+                        <button id="punchButton" class="bg-green-500 text-white px-4 py-2 rounded-md mr-4">Punch In</button>
+                        <button onclick="logout()" class="bg-red-500 text-white px-4 py-2 rounded-md">Logout</button>
+                    </div>
+                </div>
+            </div>
+        </nav>
+
+        <div class="max-w-7xl mx-auto px-4 py-6">
+            <div id="adminPanel" class="hidden">
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+                    <div class="bg-white p-6 rounded-lg shadow">
+                        <h3 class="text-lg font-semibold mb-2">Total Employees</h3>
+                        <p id="totalEmployees" class="text-3xl font-bold">0</p>
+                    </div>
+                    <div class="bg-white p-6 rounded-lg shadow">
+                        <h3 class="text-lg font-semibold mb-2">Active Tasks</h3>
+                        <p id="activeTasks" class="text-3xl font-bold">0</p>
+                    </div>
+                    <div class="bg-white p-6 rounded-lg shadow">
+                        <h3 class="text-lg font-semibold mb-2">Present Today</h3>
+                        <p id="presentToday" class="text-3xl font-bold">0</p>
+                    </div>
+                </div>
+                <div class="bg-white p-6 rounded-lg shadow mb-6">
+                    <h3 class="text-lg font-semibold mb-4">Employee Management</h3>
+                    <button onclick="showAddEmployeeModal()" class="bg-blue-500 text-white px-4 py-2 rounded-md mb-4">Add Employee</button>
+                    <div id="employeeList" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+                </div>
+            </div>
+
+            <div id="employeePanel" class="hidden">
+                <div class="bg-white p-6 rounded-lg shadow mb-6">
+                    <h3 class="text-lg font-semibold mb-4">My Tasks</h3>
+                    <div id="taskList" class="space-y-4"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Employee Modal -->
+    <div id="addEmployeeModal" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full">
+        <div class="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
+            <h3 class="text-lg font-semibold mb-4">Add New Employee</h3>
+            <form id="addEmployeeForm" class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Name</label>
+                    <input type="text" name="name" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500" required>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Email</label>
+                    <input type="email" name="email" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500" required>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Role</label>
+                    <select name="role" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500" required>
+                        <option value="employee">Employee</option>
+                        <option value="admin">Admin</option>
+                    </select>
+                </div>
+                <div class="flex justify-end space-x-2">
+                    <button type="button" onclick="closeAddEmployeeModal()" class="bg-gray-300 text-gray-700 px-4 py-2 rounded-md">Cancel</button>
+                    <button type="submit" class="bg-blue-500 text-white px-4 py-2 rounded-md">Add</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        // Initialize app state
+        let currentUser = null;
+        const appSlug = 'ems-app-' + Math.random().toString(36).substr(2, 9);
+        
+        // Get or set userId from localStorage
+        let userId = localStorage.getItem('userId') || Math.random().toString(36).substr(2, 9);
+        localStorage.setItem('userId', userId);
+
+        // Login handler
+        document.getElementById('loginForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+
+            try {
+                const response = await fetch('https://r0c8kgwocscg8gsokogwwsw4.zetaverse.one/mongodb', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': 'Bearer deak28MFrRUuAOHyY2Mw0D42TmH2',
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        appSlug,
+                        action: 'read',
+                        collection: 'employees',
+                        conditions: { email }
+                    })
+                });
+
+                const data = await response.json();
+                if (data.result.read && data.result.read.length > 0) {
+                    currentUser = data.result.read[0];
+                    document.getElementById('loginSection').classList.add('hidden');
+                    document.getElementById('dashboard').classList.remove('hidden');
+                    document.getElementById('userInfo').textContent = `Welcome, ${currentUser.name}`;
+                    
+                    if (currentUser.role === 'admin') {
+                        document.getElementById('adminPanel').classList.remove('hidden');
+                        loadAdminDashboard();
+                    } else {
+                        document.getElementById('employeePanel').classList.remove('hidden');
+                        loadEmployeeDashboard();
+                    }
+                } else {
+                    alert('Invalid credentials');
+                }
+            } catch (error) {
+                console.error('Login error:', error);
+                alert('Login failed');
+            }
+        });
+
+        // Punch In/Out functionality
+        let isPunchedIn = false;
+        document.getElementById('punchButton').addEventListener('click', async () => {
+            const button = document.getElementById('punchButton');
+            const action = isPunchedIn ? 'Punch Out' : 'Punch In';
+            const timestamp = new Date().toISOString();
+
+            try {
+                await fetch('https://r0c8kgwocscg8gsokogwwsw4.zetaverse.one/mongodb', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': 'Bearer deak28MFrRUuAOHyY2Mw0D42TmH2',
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        appSlug,
+                        action: 'create',
+                        collection: 'attendance',
+                        data: {
+                            userId: currentUser._id,
+                            action,
+                            timestamp
+                        }
+                    })
+                });
+
+                isPunchedIn = !isPunchedIn;
+                button.textContent = isPunchedIn ? 'Punch Out' : 'Punch In';
+                button.classList.toggle('bg-green-500');
+                button.classList.toggle('bg-red-500');
+            } catch (error) {
+                console.error('Attendance error:', error);
+                alert('Failed to record attendance');
+            }
+        });
+
+        // Admin Dashboard functions
+        async function loadAdminDashboard() {
+            try {
+                // Load employees
+                const employeesResponse = await fetch('https://r0c8kgwocscg8gsokogwwsw4.zetaverse.one/mongodb', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': 'Bearer deak28MFrRUuAOHyY2Mw0D42TmH2',
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        appSlug,
+                        action: 'read',
+                        collection: 'employees'
+                    })
+                });
+
+                const employeesData = await employeesResponse.json();
+                const employees = employeesData.result.read || [];
+                document.getElementById('totalEmployees').textContent = employees.length;
+                
+                // Display employees
+                const employeeList = document.getElementById('employeeList');
+                employeeList.innerHTML = employees.map(employee => `
+                    <div class="bg-gray-50 p-4 rounded-lg">
+                        <h4 class="font-semibold">${employee.name}</h4>
+                        <p class="text-sm text-gray-600">${employee.email}</p>
+                        <p class="text-sm text-gray-600">Role: ${employee.role}</p>
+                        <button onclick="assignTask('${employee._id}')" class="mt-2 bg-blue-500 text-white px-3 py-1 rounded-md text-sm">Assign Task</button>
+                    </div>
+                `).join('');
+
+                // Load tasks
+                const tasksResponse = await fetch('https://r0c8kgwocscg8gsokogwwsw4.zetaverse.one/mongodb', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': 'Bearer deak28MFrRUuAOHyY2Mw0D42TmH2',
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        appSlug,
+                        action: 'read',
+                        collection: 'tasks',
+                        conditions: { status: 'active' }
+                    })
+                });
+
+                const tasksData = await tasksResponse.json();
+                const activeTasks = tasksData.result.read || [];
+                document.getElementById('activeTasks').textContent = activeTasks.length;
+
+            } catch (error) {
+                console.error('Dashboard loading error:', error);
+                alert('Failed to load dashboard data');
+            }
+        }
+
+        // Employee Dashboard functions
+        async function loadEmployeeDashboard() {
+            try {
+                const response = await fetch('https://r0c8kgwocscg8gsokogwwsw4.zetaverse.one/mongodb', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': 'Bearer deak28MFrRUuAOHyY2Mw0D42TmH2',
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        appSlug,
+                        action: 'read',
+                        collection: 'tasks',
+                        conditions: { assignedTo: currentUser._id }
+                    })
+                });
+
+                const data = await response.json();
+                const tasks = data.result.read || [];
+                
+                const taskList = document.getElementById('taskList');
+                taskList.innerHTML = tasks.map(task => `
+                    <div class="bg-gray-50 p-4 rounded-lg">
+                        <h4 class="font-semibold">${task.title}</h4>
+                        <p class="text-sm text-gray-600">${task.description}</p>
+                        <p class="text-sm text-gray-600">Status: ${task.status}</p>
+                        <button onclick="updateTaskStatus('${task._id}', 'completed')" class="mt-2 bg-green-500 text-white px-3 py-1 rounded-md text-sm">Complete</button>
+                    </div>
+                `).join('');
+            } catch (error) {
+                console.error('Task loading error:', error);
+                alert('Failed to load tasks');
+            }
+        }
+
+        // Helper functions
+        function logout() {
+            currentUser = null;
+            document.getElementById('dashboard').classList.add('hidden');
+            document.getElementById('loginSection').classList.remove('hidden');
+            document.getElementById('adminPanel').classList.add('hidden');
+            document.getElementById('employeePanel').classList.add('hidden');
+        }
+
+        function showAddEmployeeModal() {
+            document.getElementById('addEmployeeModal').classList.remove('hidden');
+        }
+
+        function closeAddEmployeeModal() {
+            document.getElementById('addEmployeeModal').classList.add('hidden');
+        }
+
+        async function assignTask(employeeId) {
+            const taskTitle = prompt('Enter task title:');
+            const taskDescription = prompt('Enter task description:');
+
+            if (taskTitle && taskDescription) {
+                try {
+                    await fetch('https://r0c8kgwocscg8gsokogwwsw4.zetaverse.one/mongodb', {
+                        method: 'POST',
+                        headers: {
+                            'Authorization': 'Bearer deak28MFrRUuAOHyY2Mw0D42TmH2',
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            appSlug,
+                            action: 'create',
+                            collection: 'tasks',
+                            data: {
+                                title: taskTitle,
+                                description: taskDescription,
+                                assignedTo: employeeId,
+                                status: 'active',
+                                createdAt: new Date().toISOString()
+                            }
+                        })
+                    });
+
+                    alert('Task assigned successfully');
+                    loadAdminDashboard();
+                } catch (error) {
+                    console.error('Task assignment error:', error);
+                    alert('Failed to assign task');
+                }
+            }
+        }
+
+        // Initialize the application
+        document.addEventListener('DOMContentLoaded', () => {
+            // Set up event listeners and initial state
+            document.getElementById('addEmployeeForm').addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const formData = new FormData(e.target);
+                try {
+                    await fetch('https://r0c8kgwocscg8gsokogwwsw4.zetaverse.one/mongodb', {
+                        method: 'POST',
+                        headers: {
+                            'Authorization': 'Bearer deak28MFrRUuAOHyY2Mw0D42TmH2',
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            appSlug,
+                            action: 'create',
+                            collection: 'employees',
+                            data: {
+                                name: formData.get('name'),
+                                email: formData.get('email'),
+                                role: formData.get('role'),
+                                createdAt: new Date().toISOString()
+                            }
+                        })
+                    });
+
+                    alert('Employee added successfully');
+                    closeAddEmployeeModal();
+                    loadAdminDashboard();
+                } catch (error) {
+                    console.error('Add employee error:', error);
+                    alert('Failed to add employee');
+                }
+            });
+        });
+    </script>
+<script>document.body.addEventListener('wheel', e => { if (!e.ctrlKey) return; e.preventDefault(); return }, { passive: false })</script>
+	</body>
+</html>
